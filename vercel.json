@@ -1,5 +1,3 @@
 {
-  "buildCommand": "next build",
-  "framework": "nextjs",
-  "ignoreCommand": "echo 'Ignoring build errors'"
+  "framework": "nextjs"
 } 
