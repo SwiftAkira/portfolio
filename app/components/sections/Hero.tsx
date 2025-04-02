@@ -865,7 +865,7 @@ export default function Hero() {
                   }}
                 >
                   <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-primary/70">Orion Lamme</span>
-                </motion.h1>
+              </motion.h1>
               </motion.div>
               
               <motion.div 
@@ -915,11 +915,11 @@ export default function Hero() {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.98 }}
               >
-                <Link href="#contact">
+              <Link href="#contact">
                   <Button variant="outline" className="gap-1.5 px-8 py-6 backdrop-blur-sm bg-background/50">
                     Get In Touch
-                  </Button>
-                </Link>
+                </Button>
+              </Link>
               </motion.div>
             </motion.div>
             
@@ -932,25 +932,25 @@ export default function Hero() {
               <Link href="https://github.com/SwiftAkira" target="_blank" rel="noopener noreferrer">
                 <motion.div whileHover={{ scale: 1.1, rotate: 5 }} whileTap={{ scale: 0.9 }}>
                   <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full">
-                    <Github className="h-5 w-5" />
-                    <span className="sr-only">GitHub</span>
-                  </Button>
+                  <Github className="h-5 w-5" />
+                  <span className="sr-only">GitHub</span>
+                </Button>
                 </motion.div>
               </Link>
               <Link href="https://linkedin.com/in/orion-lamme" target="_blank" rel="noopener noreferrer">
                 <motion.div whileHover={{ scale: 1.1, rotate: 5 }} whileTap={{ scale: 0.9 }}>
                   <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full">
-                    <Linkedin className="h-5 w-5" />
-                    <span className="sr-only">LinkedIn</span>
-                  </Button>
+                  <Linkedin className="h-5 w-5" />
+                  <span className="sr-only">LinkedIn</span>
+                </Button>
                 </motion.div>
               </Link>
               <Link href="mailto:orionlamme01@gmail.com">
                 <motion.div whileHover={{ scale: 1.1, rotate: 5 }} whileTap={{ scale: 0.9 }}>
                   <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full">
-                    <Mail className="h-5 w-5" />
-                    <span className="sr-only">Email</span>
-                  </Button>
+                  <Mail className="h-5 w-5" />
+                  <span className="sr-only">Email</span>
+                </Button>
                 </motion.div>
               </Link>
             </motion.div>
