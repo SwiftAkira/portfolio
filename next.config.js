@@ -1,7 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'export',
-  basePath: '/portfolio',
   images: { unoptimized: true },
   eslint: {
     // Warning: This allows production builds to successfully complete even if
