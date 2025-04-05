@@ -20,11 +20,24 @@ export function ScrollProgressIndicator() {
 }
 
 export function ScrollToTopButton() {
-  const { scrollYProgress } = useScroll();
-  
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
+  const [isVisible, setIsVisible] = React.useState(false);
+
+  React.useEffect(() => {
+    const checkScroll = () => {
+      if (window.scrollY > window.innerHeight * 0.2) {
+        setIsVisible(true);
+      } else {
+        setIsVisible(false);
+      }
+    };
+    window.addEventListener("scroll", checkScroll);
+    checkScroll();
+    return () => window.removeEventListener("scroll", checkScroll);
+  }, []);
   
   return (
     <motion.button
@@ -32,11 +45,12 @@ export function ScrollToTopButton() {
       onClick={scrollToTop}
       initial={{ opacity: 0, scale: 0.8 }}
       animate={{ 
-        opacity: scrollYProgress.get() > 0.2 ? 1 : 0,
-        scale: scrollYProgress.get() > 0.2 ? 1 : 0.8,
+        opacity: isVisible ? 1 : 0,
+        scale: isVisible ? 1 : 0.8,
       }}
       whileHover={{ scale: 1.1 }}
       whileTap={{ scale: 0.9 }}
+      aria-label="Scroll to top"
     >
       <svg 
         width="20" 
@@ -62,7 +76,6 @@ interface FloatingNavIndicatorProps {
 }
 
 export function FloatingNavIndicator({ sections }: FloatingNavIndicatorProps) {
-  const { scrollYProgress } = useScroll();
   const [activeSection, setActiveSection] = React.useState(0);
   
   React.useEffect(() => {

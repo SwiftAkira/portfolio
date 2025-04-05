@@ -4,10 +4,10 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, useAnimation, useMotionValue, useSpring, useTransform } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Github, Linkedin, Mail, Phone, MapPin, Send, Sparkles, ArrowRight } from 'lucide-react';
+import { Github, Mail, MapPin, Send, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { CircleBlur, FloatingShape } from '../ui/DecorativeElements';
-import { useScrollAnimation, fadeIn, scaleIn } from '@/app/lib/hooks/useScrollAnimation';
+import { useScrollAnimation, fadeIn } from '@/app/lib/hooks/useScrollAnimation';
 
 // Magnetic Button Component
 const MagneticButton = ({ children, className = "", href, icon, onClick, external = false }: { 
@@ -204,34 +204,40 @@ const AnimatedInput = ({
   );
 };
 
-// Particle Background
+// Particle Background - Wrap state in useEffect for hydration safety
 const ParticleField = () => {
-  const particles = Array.from({ length: 40 }).map((_, i) => ({
-    id: i,
-    x: Math.random() * 100,
-    y: Math.random() * 100,
-    size: Math.random() * 4 + 1,
-    duration: Math.random() * 20 + 10,
-    delay: Math.random() * 2,
-  }));
+  const [particles, setParticles] = useState<{ id: number; x: number; y: number; size: number; duration: number; delay: number; }[]>([]);
+
+  useEffect(() => {
+    setParticles(
+      Array.from({ length: 40 }).map((_, i) => ({
+        id: i,
+        x: Math.random() * 100,
+        y: Math.random() * 100,
+        size: Math.random() * 4 + 1,
+        duration: Math.random() * 20 + 10,
+        delay: Math.random() * 2,
+      }))
+    );
+  }, []); // Empty dependency array ensures this runs only once on mount
 
   return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+    <div className="absolute inset-0 overflow-hidden pointer-events-none -z-10"> {/* Ensure particles are behind */} 
       {particles.map((particle) => (
         <motion.div
           key={particle.id}
           className="absolute rounded-full bg-primary/10"
           style={{
-            x: `${particle.x}%`,
-            y: `${particle.y}%`,
+            left: `${particle.x}%`,
+            top: `${particle.y}%`,
             width: `${particle.size}px`,
             height: `${particle.size}px`,
           }}
           animate={{
             opacity: [0.1, 0.3, 0.1],
             scale: [1, 1.5, 1],
-            x: [`${particle.x}%`, `${particle.x + (Math.random() * 10 - 5)}%`],
-            y: [`${particle.y}%`, `${particle.y + (Math.random() * 10 - 5)}%`],
+            translateX: [`0%`, `${(Math.random() * 10 - 5)}%`],
+            translateY: [`0%`, `${(Math.random() * 10 - 5)}%`],
           }}
           transition={{
             duration: particle.duration,
@@ -245,430 +251,233 @@ const ParticleField = () => {
   );
 };
 
-// 3D Card
+// --- Refactored 3D Card Component --- 
 const Card3D = ({ children }: { children: React.ReactNode }) => {
   const cardRef = useRef<HTMLDivElement>(null);
-  const [rotateX, setRotateX] = useState(0);
-  const [rotateY, setRotateY] = useState(0);
-  const [isHovered, setIsHovered] = useState(false);
-  
-  const handleMouseMove = (e: React.MouseEvent) => {
+
+  // Use motion values for direct, smooth updates without re-renders
+  const mouseX = useMotionValue(0);
+  const mouseY = useMotionValue(0);
+
+  // Spring physics for natural movement
+  const springConfig = { stiffness: 150, damping: 20, mass: 0.1 };
+  const smoothMouseX = useSpring(mouseX, springConfig);
+  const smoothMouseY = useSpring(mouseY, springConfig);
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!cardRef.current) return;
     const rect = cardRef.current.getBoundingClientRect();
-    const centerX = rect.left + rect.width / 2;
-    const centerY = rect.top + rect.height / 2;
-    
-    const mouseX = e.clientX;
-    const mouseY = e.clientY;
-    
-    const rotateXValue = ((mouseY - centerY) / (rect.height / 2)) * 5;
-    const rotateYValue = ((mouseX - centerX) / (rect.width / 2)) * 5;
-    
-    setRotateX(-rotateXValue);
-    setRotateY(rotateYValue);
+    const { clientX, clientY } = e;
+    // Calculate mouse position relative to card center (-0.5 to 0.5)
+    const xPct = (clientX - rect.left) / rect.width - 0.5;
+    const yPct = (clientY - rect.top) / rect.height - 0.5;
+    // Update motion values directly
+    mouseX.set(xPct);
+    mouseY.set(yPct);
   };
-  
-  const resetRotation = () => {
-    setRotateX(0);
-    setRotateY(0);
-    setIsHovered(false);
+
+  const handleMouseLeave = () => {
+    // Reset motion values to return to center
+    mouseX.set(0);
+    mouseY.set(0);
   };
-  
-  // Spring animations for smoother motion
-  const springConfig = { stiffness: 100, damping: 15, mass: 0.1 };
-  const springRotateX = useSpring(rotateX, springConfig);
-  const springRotateY = useSpring(rotateY, springConfig);
-  
+
+  // Define max rotation degrees
+  const maxRotation = 8; 
+
+  // Transform the smoothed motion values into rotateX and rotateY CSS properties
+  // Invert rotation directions for a natural feel (moving mouse right tilts card left/around Y)
+  const rotateY = useTransform(smoothMouseX, [-0.5, 0.5], [maxRotation, -maxRotation]);
+  const rotateX = useTransform(smoothMouseY, [-0.5, 0.5], [-maxRotation, maxRotation]);
+
   return (
-    <motion.div 
+    <motion.div
       ref={cardRef}
-      className="relative w-full perspective-1000 cursor-default"
-      onMouseMove={handleMouseMove}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={resetRotation}
+      className="relative w-full"
       style={{
-        transformStyle: "preserve-3d",
-        transform: isHovered ? 
-          `rotateX(${springRotateX}deg) rotateY(${springRotateY}deg)` : 
-          "rotateX(0deg) rotateY(0deg)",
-        transition: isHovered ? "none" : "transform 0.5s ease-out"
+        perspective: '1000px', // Set perspective on the parent
       }}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
     >
-      <div 
-        className="relative bg-background/20 backdrop-blur-md rounded-xl border border-primary/10 overflow-hidden shadow-lg"
-        style={{ 
-          transformStyle: "preserve-3d",
-        }}
+      {/* This inner div applies the rotation and contains the interactive content */}
+      <motion.div
+         style={{
+           transformStyle: "preserve-3d", // Ensure children are in 3D space
+           rotateX,
+           rotateY,
+           // Add a subtle transition for when the mouse leaves
+           transition: 'transform 0.4s ease-out' 
+         }}
       >
-        {/* Card lighting effect */}
-        <div 
-          className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/10 opacity-0 transition-opacity duration-300"
-          style={{ 
-            opacity: isHovered ? 0.8 : 0,
-            transform: `translateZ(2px)`,
-            backgroundPosition: `${50 + rotateY * 2}% ${50 + rotateX * 2}%`,
-          }}
-        />
-        
-        {/* Card content */}
-        <div style={{ transform: "translateZ(20px)" }}>
-          {children}
-        </div>
-        
-        {/* Edge highlight */}
-        <div 
-          className="absolute inset-0 rounded-xl border border-primary/30 opacity-0"
-          style={{ 
-            opacity: isHovered ? 0.6 : 0,
-            transform: `translateZ(1px)`,
-          }}
-        />
-      </div>
+        {/* The children (Card component) are rendered here and should remain interactive */}
+        {children}
+      </motion.div>
     </motion.div>
   );
 };
 
 export default function Contact() {
-  const [formState, setFormState] = useState({
-    name: '',
-    email: '',
-    message: '',
-  });
-  
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitSuccess, setSubmitSuccess] = useState(false);
-  const [submitError, setSubmitError] = useState('');
-  const [animateForm, setAnimateForm] = useState(false);
-  
-  const { ref, controls } = useScrollAnimation(0.1);
-  
+  const { ref, controls } = useScrollAnimation();
+  const [formData, setFormData] = useState({ name: '', email: '', message: '' });
+  const [status, setStatus] = useState('');
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormState({
-      ...formState,
-      [e.target.name]: e.target.value,
-    });
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
-  
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
-    setSubmitError('');
-    setAnimateForm(true);
-    
-    // Simulate form submission - in a real application, you would send this to your backend
-    try {
-      // Replace with actual API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      setSubmitSuccess(true);
-      setFormState({ name: '', email: '', message: '' });
-    } catch (error) {
-      setSubmitError('There was an error submitting your message. Please try again.');
-    } finally {
-      setIsSubmitting(false);
-      setTimeout(() => setAnimateForm(false), 1000);
-    }
+    setStatus('Sending...');
+    console.log('Form data:', formData);
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    setStatus('Message Sent!');
+    setFormData({ name: '', email: '', message: '' });
+    setTimeout(() => setStatus(''), 3000);
   };
-  
+
   return (
-    <section id="contact" className="relative py-24 w-full overflow-hidden">
-      {/* Decorative elements */}
+    <motion.section 
+      id="contact"
+      ref={ref}
+      variants={fadeIn}
+      initial="hidden"
+      animate={controls}
+      className="py-20 lg:py-32 relative w-full overflow-hidden"
+    >
       <ParticleField />
-      <CircleBlur className="top-20 -left-32 opacity-20" size="300px" duration={15} />
-      <CircleBlur className="bottom-40 -right-40 opacity-10" size="400px" delay={2} duration={20} />
-      <FloatingShape className="top-40 right-[5%] w-12 h-12 rotate-12 border border-primary/30 rounded-md" delay={1} />
-      <FloatingShape className="bottom-20 left-[10%] w-8 h-8 rotate-45 bg-primary/5 rounded-full" delay={0.5} />
-      
-      <div className="container relative z-10 mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 max-w-screen-2xl">
-        <motion.div 
-          className="flex flex-col items-center justify-center space-y-4 text-center mb-16"
-          variants={fadeIn}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-        >
-          <motion.div 
-            className="inline-flex items-center justify-center space-x-1 px-3 py-1 rounded-full bg-primary/10 text-primary text-sm mb-2"
-            initial={{ opacity: 0, y: 10 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.3, delay: 0.1 }}
-          >
-            <Sparkles className="w-4 h-4 mr-1" />
-            <span>Let's Connect</span>
-          </motion.div>
-          
-          <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
-            <span className="relative">
-              Get In Touch
-              <motion.span 
-                className="absolute -bottom-2 left-0 w-full h-1 bg-primary/30 rounded-full"
-                initial={{ width: 0 }}
-                whileInView={{ width: "100%" }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6, delay: 0.4 }}
-              />
-            </span>
+      <CircleBlur className="absolute left-[10%] top-[5%] opacity-50" size="400px" duration={30} /> 
+      <FloatingShape className="absolute left-[15%] bottom-[20%] w-10 h-10 border-2 border-primary/10 rounded-full rotate-45" delay={1} />
+
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 max-w-screen-xl z-10 relative">
+        <div className="flex flex-col items-center justify-center space-y-4 text-center mb-16">
+          <span className="text-primary font-mono tracking-widest text-sm">CONNECT</span>
+          <h2 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl">
+            Get In <span className="text-primary">Touch</span>
           </h2>
-          <motion.p 
-            className="mx-auto max-w-[700px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-          >
-            Have a project in mind or want to discuss potential opportunities? I'd love to hear from you!
-            I'm currently available for remote contract or part-time positions.
-          </motion.p>
-        </motion.div>
-        
-        <div className="grid gap-8 lg:grid-cols-2 max-w-6xl mx-auto">
           <motion.div 
-            ref={ref}
-            className="space-y-8"
+            className="w-20 h-1 bg-primary rounded mt-2"
+            initial={{ width: 0 }}
+            animate={{ width: 80 }}
+            transition={{ delay: 0.5, duration: 0.8 }}
+          />
+          <p className="mx-auto max-w-[700px] text-muted-foreground md:text-xl/relaxed lg:text-xl/relaxed mt-6">
+            Have a project in mind, a question, or just want to say hi? Feel free to reach out!
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-start">
+          {/* Contact Info & Socials Card Wrapper */}
+          <motion.div 
             variants={fadeIn}
-            initial="hidden"
-            animate={controls}
-            viewport={{ once: true }}
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.2 }}
+            className="space-y-8"
           >
-            {/* Contact Info Card */}
+            {/* Apply 3D effect to the Card */}
             <Card3D>
-              <div className="p-6 space-y-6">
-                <div className="space-y-3">
-                  <h3 className="text-xl font-bold flex items-center">
-                    <Mail className="w-5 h-5 mr-2 text-primary" />
-                    Let's Talk
-                  </h3>
-                  <p className="text-muted-foreground">
-                    Feel free to reach out through any of these channels:
-                  </p>
-                </div>
-                
-                <motion.div 
-                  className="grid gap-4"
-                  variants={{
-                    hidden: { opacity: 0 },
-                    visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
-                  }}
-                  initial="hidden"
-                  whileInView="visible"
-                  viewport={{ once: true }}
-                >
-                  <motion.div
-                    variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } }}
-                    className="group"
-                  >
-                    <Link href="mailto:orionlamme01@gmail.com" className="block">
-                      <div className="flex items-center gap-4 p-4 rounded-lg bg-gradient-to-r from-background/30 to-background/50 backdrop-blur-sm border border-primary/5 hover:border-primary/20 transition-all duration-300 group-hover:shadow-md group-hover:shadow-primary/5">
-                        <div className="p-2 rounded-full bg-primary/10 text-primary group-hover:bg-primary/20 transition-all duration-300">
-                          <Mail className="h-5 w-5" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-sm">Email</p>
-                          <p className="text-sm text-muted-foreground group-hover:text-primary transition-colors duration-300">
-                            orionlamme01@gmail.com
-                          </p>
-                        </div>
-                        <ArrowRight className="ml-auto h-4 w-0 text-primary opacity-0 group-hover:w-4 group-hover:opacity-100 transition-all duration-300" />
-                      </div>
-                    </Link>
-                  </motion.div>
-                  
-                  <motion.div
-                    variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } }}
-                    className="group"
-                  >
-                    <Link href="tel:+31615584889" className="block">
-                      <div className="flex items-center gap-4 p-4 rounded-lg bg-gradient-to-r from-background/30 to-background/50 backdrop-blur-sm border border-primary/5 hover:border-primary/20 transition-all duration-300 group-hover:shadow-md group-hover:shadow-primary/5">
-                        <div className="p-2 rounded-full bg-primary/10 text-primary group-hover:bg-primary/20 transition-all duration-300">
-                          <Phone className="h-5 w-5" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-sm">Phone</p>
-                          <p className="text-sm text-muted-foreground group-hover:text-primary transition-colors duration-300">
-                            +31 6 1558 4889
-                          </p>
-                        </div>
-                        <ArrowRight className="ml-auto h-4 w-0 text-primary opacity-0 group-hover:w-4 group-hover:opacity-100 transition-all duration-300" />
-                      </div>
-                    </Link>
-                  </motion.div>
-                  
-                  <motion.div
-                    variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } }}
-                    className="group"
-                  >
-                    <div className="flex items-center gap-4 p-4 rounded-lg bg-gradient-to-r from-background/30 to-background/50 backdrop-blur-sm border border-primary/5 hover:border-primary/20 transition-all duration-300 group-hover:shadow-md group-hover:shadow-primary/5">
-                      <div className="p-2 rounded-full bg-primary/10 text-primary group-hover:bg-primary/20 transition-all duration-300">
-                        <MapPin className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-sm">Location</p>
-                        <p className="text-sm text-muted-foreground group-hover:text-primary transition-colors duration-300">
-                          Almere, Flevoland, Netherlands
-                        </p>
-                      </div>
+              {/* Dark Mode Adjustment: Increased card background opacity */}
+              <Card className="bg-card/40 backdrop-blur-lg border-primary/10 shadow-xl overflow-hidden">
+                <CardContent className="p-8 space-y-6">
+                  <h3 className="text-2xl font-semibold text-foreground">Contact Information</h3>
+                  <div className="space-y-4 text-muted-foreground">
+                    <div className="flex items-start gap-4">
+                      <MapPin className="w-5 h-5 mt-1 text-primary shrink-0" />
+                      <span>Based in Netherlands - Let&apos;s connect virtually!</span>
                     </div>
-                  </motion.div>
-                </motion.div>
-                
-                <div className="space-y-3">
-                  <h3 className="text-xl font-bold pt-2">Connect With Me</h3>
-                  <div className="flex flex-wrap gap-3">
-                    <MagneticButton 
-                      href="https://github.com/SwiftAkira" 
-                      className="bg-gradient-to-br from-gray-800 to-gray-900 text-white"
-                      icon={<Github className="w-5 h-5" />}
-                      external={true}
-                    >
-                      GitHub
-                    </MagneticButton>
-                    
-                    <MagneticButton 
-                      href="https://linkedin.com/in/orion-lamme" 
-                      className="bg-gradient-to-br from-blue-600 to-blue-700 text-white"
-                      icon={<Linkedin className="w-5 h-5" />}
-                      external={true}
-                    >
-                      LinkedIn
-                    </MagneticButton>
-                    
-                    <MagneticButton 
-                      href="mailto:orionlamme01@gmail.com" 
-                      className="bg-gradient-to-br from-purple-600 to-purple-700 text-white"
-                      icon={<Mail className="w-5 h-5" />}
-                      external={true}
-                    >
-                      Email
-                    </MagneticButton>
+                    <div className="flex items-start gap-4">
+                      <Mail className="w-5 h-5 mt-1 text-primary shrink-0" />
+                      <a href="mailto:orionlamme01@gmail.com" className="hover:text-primary transition-colors">orionlamme01@gmail.com</a>
+                    </div>
                   </div>
-                </div>
-              </div>
+                  
+                  <div className="border-t border-primary/10 pt-6">
+                    <h4 className="text-lg font-medium mb-4 text-foreground">Find me on</h4>
+                    <div className="flex items-center flex-wrap gap-4">
+                      <MagneticButton 
+                        href="https://github.com/SwiftAkira" 
+                        icon={<Github size={18} />}
+                        className="bg-card/60 border border-primary/20 hover:bg-accent hover:text-accent-foreground text-sm"
+                        external={true}
+                      >
+                        GitHub
+                      </MagneticButton>
+                      <MagneticButton 
+                        href="mailto:orionlamme01@gmail.com"
+                        icon={<Mail size={18} />}
+                        className="bg-card/60 border border-primary/20 hover:bg-accent hover:text-accent-foreground text-sm"
+                      >
+                        Email
+                      </MagneticButton>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </Card3D>
           </motion.div>
-          
-          <motion.div
-            className="relative"
-            variants={scaleIn}
-            initial="hidden"
+
+          {/* Contact Form Card Wrapper */}
+          <motion.div 
+            variants={fadeIn} 
             whileInView="visible"
-            viewport={{ once: true }}
+            viewport={{ once: true, amount: 0.2 }}
+            className="w-full"
           >
-            {/* Form Card */}
+            {/* Apply 3D effect to the Card */}
             <Card3D>
-              <div className="p-6 space-y-6">
-                <div className="space-y-2">
-                  <h3 className="text-xl font-bold flex items-center">
-                    <Send className="w-5 h-5 mr-2 text-primary" />
-                    Send a Message
-                  </h3>
-                  <p className="text-muted-foreground">
-                    I'll get back to you as soon as possible.
-                  </p>
-                </div>
-                
-                <motion.form 
-                  id="contact-form"
-                  onSubmit={handleSubmit} 
-                  className="space-y-5"
-                  animate={animateForm ? { 
-                    y: [0, -10, 0],
-                    opacity: [1, 0.8, 1],
-                    transition: { duration: 0.5 } 
-                  } : {}}
-                >
-                  <AnimatedInput
-                    label="Name"
-                    id="name"
-                    name="name"
-                    value={formState.name}
-                    onChange={handleChange}
-                    placeholder="Your name"
-                    required
-                  />
-                  
-                  <AnimatedInput
-                    label="Email"
-                    id="email"
-                    name="email"
-                    type="email"
-                    value={formState.email}
-                    onChange={handleChange}
-                    placeholder="Your email address"
-                    required
-                  />
-                  
-                  <AnimatedInput
-                    label="Message"
-                    id="message"
-                    name="message"
-                    as="textarea"
-                    rows={5}
-                    value={formState.message}
-                    onChange={handleChange}
-                    placeholder="Your message"
-                    required
-                  />
-                  
-                  {submitError && (
-                    <motion.p 
-                      className="text-sm text-red-500 bg-red-500/10 px-3 py-2 rounded-md"
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                    >
-                      {submitError}
-                    </motion.p>
-                  )}
-                  
-                  {submitSuccess && (
-                    <motion.div 
-                      className="text-sm text-green-500 bg-green-500/10 px-3 py-2 rounded-md flex items-center"
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                    >
-                      <Sparkles className="w-4 h-4 mr-2" />
-                      Your message has been sent successfully!
-                    </motion.div>
-                  )}
-                  
-                  <div className="pt-2">
-                    <MagneticButton
-                      onClick={isSubmitting ? undefined : () => {
-                        const form = document.getElementById('contact-form');
-                        if (form) {
-                          form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
-                        }
-                      }}
-                      className={`w-full bg-gradient-to-r from-primary to-primary/80 text-white font-medium ${isSubmitting ? 'opacity-80' : ''}`}
-                      icon={isSubmitting ? <div className="w-5 h-5 rounded-full border-2 border-t-transparent border-white animate-spin" /> : <Send className="w-5 h-5" />}
-                    >
-                      {isSubmitting ? 'Sending...' : 'Send Message'}
-                    </MagneticButton>
-                  </div>
-                </motion.form>
-              </div>
+              {/* Dark Mode Adjustment: Increased card background opacity */}
+              <Card className="bg-card/40 backdrop-blur-lg border-primary/10 shadow-xl overflow-hidden w-full">
+                <CardContent className="p-8">
+                  <form onSubmit={handleSubmit} className="space-y-6">
+                    <h3 className="text-2xl font-semibold text-foreground mb-6">Send a Message</h3>
+                    <AnimatedInput 
+                      label="Your Name" id="name" name="name" placeholder="What should I call you?"
+                      value={formData.name} onChange={handleChange} required
+                    />
+                    <AnimatedInput 
+                      label="Your Email" id="email" name="email" type="email" placeholder="Where can I reply?"
+                      value={formData.email} onChange={handleChange} required
+                    />
+                    <AnimatedInput 
+                      as="textarea" label="Your Message" id="message" name="message" placeholder="What&apos;s on your mind?"
+                      value={formData.message} onChange={handleChange} required rows={5}
+                    />
+                    <div className="flex justify-between items-center pt-2">
+                      <Button 
+                        type="submit" size="lg" 
+                        className="group bg-primary hover:bg-primary/90 text-primary-foreground font-semibold transition-all duration-300 shadow-lg hover:shadow-primary/30 w-full sm:w-auto"
+                        disabled={status === 'Sending...' || status === 'Message Sent!'}
+                      >
+                        {status === 'Sending...' ? (
+                          <motion.span animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }} className="mr-2 inline-block">
+                            <Sparkles size={18} />
+                          </motion.span>
+                        ) : status === 'Message Sent!' ? (
+                          <motion.span initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="mr-2">
+                           ✅
+                          </motion.span>
+                        ) : (
+                          <Send size={18} className="mr-2 group-hover:translate-x-1 transition-transform duration-200" />
+                        )}
+                        {status || 'Send Message'}
+                      </Button>
+                      {status === 'Message Sent!' && (
+                        <motion.p 
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="text-sm text-green-500 ml-4"
+                        >
+                          Thanks! I&apos;ll be in touch.
+                        </motion.p>
+                      )}
+                    </div>
+                  </form>
+                </CardContent>
+              </Card>
             </Card3D>
-            
-            {/* Decorative Elements */}
-            <div className="absolute -z-10 top-1/2 right-1/2 w-[500px] h-[500px] -translate-y-1/2 translate-x-1/2 pointer-events-none opacity-30 blur-3xl">
-              <motion.div 
-                className="absolute inset-0 rounded-full bg-gradient-to-r from-primary/20 via-purple-500/20 to-blue-500/20"
-                animate={{ 
-                  scale: [1, 1.2, 1],
-                  rotate: [0, 180, 360],
-                  borderRadius: ["50%", "40%", "50%"],
-                }}
-                transition={{ 
-                  duration: 20,
-                  repeat: Infinity,
-                  ease: "linear",
-                }}
-              />
-            </div>
           </motion.div>
         </div>
       </div>
-    </section>
+    </motion.section>
   );
 } 

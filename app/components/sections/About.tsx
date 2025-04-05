@@ -51,7 +51,7 @@ export default function About() {
     {
       icon: <Globe className="h-6 w-6 text-primary" />,
       title: "Multilingual Communication",
-      description: "Fluent in English, Dutch, and Turkish, enabling effective communication across international teams and projects."
+      description: "Fluent in English, Dutch, and Turkish, with Basic Chinese (A1-A2), enabling effective communication across international teams and projects."
     },
     {
       icon: <BookOpen className="h-6 w-6 text-primary" />,
@@ -97,7 +97,7 @@ export default function About() {
             transition={{ delay: 0.5, duration: 0.8 }}
           />
           <p className="mx-auto max-w-[700px] text-muted-foreground md:text-xl/relaxed lg:text-xl/relaxed xl:text-xl/relaxed mt-6">
-            I'm a specialized TypeScript developer with expertise in building modern web applications and interactive user interfaces.
+            I&apos;m a specialized TypeScript developer with expertise in building modern web applications and interactive user interfaces.
             I transform business requirements into elegant technical solutions that deliver exceptional experiences.
           </p>
         </motion.div>
@@ -154,7 +154,7 @@ export default function About() {
           
           <p className="mx-auto max-w-[800px] text-muted-foreground text-center">
             With experience as a <span className="font-medium text-foreground">Full-Stack Developer</span> focused on TypeScript and React, 
-            I've been developing sophisticated web applications with emphasis on responsive design, performance optimization, 
+            I&apos;ve been developing sophisticated web applications with emphasis on responsive design, performance optimization, 
             and seamless user experiences across various projects.
           </p>
         </motion.div>

@@ -3,13 +3,8 @@
 import React from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { useTheme } from '@/app/lib/context/theme-context';
-import { Button } from '@/components/ui/button';
-import { Moon, Sun } from 'lucide-react';
 
 export default function Navbar() {
-  const { theme, toggleTheme } = useTheme();
-  
   return (
     <motion.header 
       className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur"
@@ -45,23 +40,6 @@ export default function Navbar() {
             Contact
           </Link>
         </nav>
-        
-        <div className="flex items-center gap-4">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={toggleTheme}
-            aria-label="Toggle theme"
-          >
-            {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
-          </Button>
-          
-          <Button className="hidden md:flex" asChild>
-            <a href="/Orion_Lamme_Resume.pdf" target="_blank" rel="noopener noreferrer">
-              Resume
-            </a>
-          </Button>
-        </div>
       </div>
     </motion.header>
   );

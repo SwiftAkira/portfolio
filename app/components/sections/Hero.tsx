@@ -1,11 +1,10 @@
 "use client";
 
 import React, { useRef, useState, useEffect, useMemo, useCallback } from 'react';
-import { motion, useScroll, useTransform, useSpring, useMotionValue, AnimatePresence, MotionValue } from 'framer-motion';
+import { motion, useScroll, useTransform, useSpring, useMotionValue, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { ArrowRight, Github, Linkedin, Mail, ChevronDown } from 'lucide-react';
-import { CircleBlur, CodeSnippet, FloatingShape, Grid } from '@/app/components/ui/DecorativeElements';
+import { Github, Mail, ArrowRight, ChevronDown } from 'lucide-react';
 import dynamic from 'next/dynamic';
 
 // Client-side only component to avoid hydration errors with randomness
@@ -58,7 +57,7 @@ const AnimatedWord: React.FC<AnimatedWordProps> = ({ text, delay = 0, className 
   
   const container = {
     hidden: { opacity: 0 },
-    visible: (i = 1) => ({
+    visible: () => ({
       opacity: 1,
       transition: { staggerChildren: 0.03, delayChildren: delay * 0.1 },
     }),
@@ -206,14 +205,6 @@ const TerminalCard: React.FC<{ className?: string }> = ({ className = "" }) => {
   const [isEasterEgg, setIsEasterEgg] = useState(false);
   const [easterEggType, setEasterEggType] = useState("");
   
-  const skills = useMemo(() => [
-    "TypeScript",
-    "React",
-    "Next.js",
-    "Node.js",
-    "SaaS"
-  ], []);
-  
   // Get a random kawaii face
   const getRandomKawaiiFace = useCallback(() => {
     return kawaiiFaces[Math.floor(Math.random() * kawaiiFaces.length)];
@@ -243,7 +234,7 @@ const TerminalCard: React.FC<{ className?: string }> = ({ className = "" }) => {
   // Add a state for kawaii mode
   const [kawaiiMode, setKawaiiMode] = useState(false);
   
-  // Update the terminal command interpreter to handle kawaii mode more professionally
+  // Update the terminal command interpreter
   const executeCommand = useCallback((cmd: string) => {
     // Trim whitespace
     const command = cmd.trim().toLowerCase();
@@ -366,7 +357,6 @@ const TerminalCard: React.FC<{ className?: string }> = ({ className = "" }) => {
           {type: 'kawaii', content: `${getRandomKawaiiFace()} Let's get in touch!`},
           {type: 'output', content: 'Email: orionlamme01@gmail.com'},
           {type: 'output', content: 'GitHub: https://github.com/SwiftAkira'},
-          {type: 'output', content: 'LinkedIn: https://linkedin.com/in/orion-lamme'},
         ]);
       } else {
         setTerminalOutput(prev => [
@@ -375,7 +365,6 @@ const TerminalCard: React.FC<{ className?: string }> = ({ className = "" }) => {
           {type: 'system', content: 'Contact Information:'},
           {type: 'output', content: 'Email: orionlamme01@gmail.com'},
           {type: 'output', content: 'GitHub: https://github.com/SwiftAkira'},
-          {type: 'output', content: 'LinkedIn: https://linkedin.com/in/orion-lamme'},
         ]);
       }
     } else if (command === 'projects') {
@@ -496,7 +485,7 @@ const TerminalCard: React.FC<{ className?: string }> = ({ className = "" }) => {
     
     // Clear input
     setCurrentInput("");
-  }, [getRandomKawaiiFace, kawaiiMode, isEasterEgg, setIsEasterEgg, setEasterEggType]);
+  }, [getRandomKawaiiFace, kawaiiMode, setIsEasterEgg, setEasterEggType, rainbowText]);
   
   // Handle key presses including command history
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -730,7 +719,6 @@ const TerminalCard: React.FC<{ className?: string }> = ({ className = "" }) => {
 
 export default function Hero() {
   const containerRef = useRef<HTMLElement>(null);
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
   
@@ -760,30 +748,22 @@ export default function Hero() {
   const imageY = useTransform(smoothMouseY, [0, typeof window !== 'undefined' ? window.innerHeight : 1000], [-20, 20]);
   
   // Update mouse position for parallax effect
-  const handleMouseMove = (e: React.MouseEvent<HTMLElement>) => {
+  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLElement>) => {
     const { clientX, clientY } = e;
-    
     mouseX.set(clientX);
     mouseY.set(clientY);
-    
-    setMousePosition({
-      x: (clientX / window.innerWidth) - 0.5,
-      y: (clientY / window.innerHeight) - 0.5,
-    });
-  };
+  }, [mouseX, mouseY]);
   
   useEffect(() => {
-    // Only run on client-side
     if (typeof window !== 'undefined') {
-      // Set initial mouse position to center
       mouseX.set(window.innerWidth / 2);
       mouseY.set(window.innerHeight / 2);
       
-      // Cleanup event listener
-      window.addEventListener("mousemove", handleMouseMove as unknown as EventListener);
-      return () => window.removeEventListener("mousemove", handleMouseMove as unknown as EventListener);
+      const handleMove = (e: MouseEvent) => handleMouseMove(e as unknown as React.MouseEvent<HTMLElement>);
+      window.addEventListener("mousemove", handleMove);
+      return () => window.removeEventListener("mousemove", handleMove);
     }
-  }, []);
+  }, [handleMouseMove, mouseX, mouseY]);
   
   // Typing animation text segments
   const phrases = [
@@ -800,7 +780,7 @@ export default function Hero() {
     }, 5000);
     
     return () => clearInterval(interval);
-  }, []);
+  }, [phrases.length]);
   
   return (
     <section 
@@ -850,7 +830,7 @@ export default function Hero() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5 }}
                 >
-                  HELLO, I'M
+                  HELLO, I&apos;M
                 </motion.p>
                 
                 <motion.h1 
@@ -865,7 +845,7 @@ export default function Hero() {
                   }}
                 >
                   <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-primary/70">Orion Lamme</span>
-              </motion.h1>
+                </motion.h1>
               </motion.div>
               
               <motion.div 
@@ -934,14 +914,6 @@ export default function Hero() {
                   <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full">
                   <Github className="h-5 w-5" />
                   <span className="sr-only">GitHub</span>
-                </Button>
-                </motion.div>
-              </Link>
-              <Link href="https://linkedin.com/in/orion-lamme" target="_blank" rel="noopener noreferrer">
-                <motion.div whileHover={{ scale: 1.1, rotate: 5 }} whileTap={{ scale: 0.9 }}>
-                  <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full">
-                  <Linkedin className="h-5 w-5" />
-                  <span className="sr-only">LinkedIn</span>
                 </Button>
                 </motion.div>
               </Link>

@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { ThemeProvider } from "./lib/context/theme-context";
 import Navbar from "./components/layout/Navbar";
 import Footer from "./components/layout/Footer";
 import { ScrollProgressIndicator, ScrollToTopButton, FloatingNavIndicator } from "./components/ui/ScrollIndicator";
@@ -36,21 +35,19 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning className="scroll-smooth">
+    <html lang="en" className="dark scroll-smooth">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col w-full overflow-x-hidden`}
       >
-        <ThemeProvider>
-          <ScrollProgressIndicator />
-          <Navbar />
-          <main className="flex-grow w-full">
-            {children}
-          </main>
-          <Footer />
-          <ScrollToTopButton />
-          <FloatingNavIndicator sections={["about", "projects", "skills", "contact"]} />
-          <CustomScrollbar />
-        </ThemeProvider>
+        <ScrollProgressIndicator />
+        <Navbar />
+        <main className="flex-grow w-full">
+          {children}
+        </main>
+        <Footer />
+        <ScrollToTopButton />
+        <FloatingNavIndicator sections={["about", "projects", "skills", "contact"]} />
+        <CustomScrollbar />
       </body>
     </html>
   );
